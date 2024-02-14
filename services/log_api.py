@@ -21,7 +21,13 @@ class LogApiService(DockerComposeService):
             "    environment:",
             "      - PYTHONUNBUFFERED=1",
             "    volumes:",
-            "      - <path>:/home/api/log_data"
+            "      - <path>:/home/api/log_data",
+            "    healthcheck:",
+            "      test: ['CMD-SHELL', 'curl -f http://localhost:<port>/health || exit 1']",
+            "      interval: 30s",
+            "      timeout: 10s",
+            "      retries: 3",
+            "      start_period: 10s"
         ]
 
         variables = {

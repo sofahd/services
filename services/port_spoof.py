@@ -42,9 +42,10 @@ class PortSpoofService(DockerComposeService):
             "    networks:",
             "      - log_net",
             "    depends_on:",
-            "      - <log_container_name>",
+            "      <log_container_name>:",
+            "        condition: service_healthy",
             "    environment:",
-            "      - PYTHONUNBUFFERED=1",
+            "      - PYTHONUNBUFFERED=1"
         ]     
 
         variables = {
