@@ -10,6 +10,7 @@ class PortSpoofService(DockerComposeService):
         """
         Constructor for the PortSpoofService class. It takes in the name of the service, the port to spoof, the banner to spoof, and the mode to run the service in.
 
+        ---
         :param name: The name of the service.
         :type name: str
         :param port: The port to spoof.
