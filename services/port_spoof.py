@@ -31,7 +31,7 @@ class PortSpoofService(DockerComposeService):
             "    container_name: <name>",
             "    restart: unless-stopped",
             "    build: ",
-            "      context: ./port_spoof",
+            "      context: ./<name>",
             "      args:",
             "        POOF_PORT: '<port>'",
             "        POOF_BANNER: '<banner>'",
