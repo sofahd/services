@@ -13,7 +13,7 @@ class LogApiService(DockerComposeService):
             "    container_name: <name>",
             "    restart: unless-stopped",
             "    build: ",
-            "      context: ./log-api",
+            "      context: ./<name>",
             "      args:",
             "        WAITRESS_PORT: <port>",
             "    networks:",
