@@ -81,8 +81,8 @@ class ApiHoneypot(DockerComposeService):
         for endpoint in self.answerset["endpoints"].keys():
             old_path = self.answerset["endpoints"][endpoint]["path"]
             self.answerset["endpoints"][endpoint]["path"] = f"/home/api/files/{self.answerset['endpoints'][endpoint]['num']}.html"
-            with open(f"{folder_name_or_path}/data/files/{self.answerset['endpoints'][endpoint]['num']}.html", "w") as f:
-                f.write(open(old_path, "r").read())
+            with open(f"{folder_name_or_path}/data/files/{self.answerset['endpoints'][endpoint]['num']}.html", "wb") as f:
+                f.write(open(old_path, "rb").read())
 
         with open(f"{folder_name_or_path}/data/answerset/answerset.json", "w") as f:
             f.write(json.dumps(self.answerset, indent=4))
