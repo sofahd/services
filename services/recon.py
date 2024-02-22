@@ -44,6 +44,8 @@ class ReconService(DockerComposeService):
             "    depends_on:",
             "      <log_container_name>:",
             "        condition: service_healthy",
+            "    volumes:",
+            "      - ./<name>/data:/home/pro/data",
             "    environment:",
             "      - PYTHONUNBUFFERED=1"
         ]     
@@ -83,6 +85,6 @@ class ReconService(DockerComposeService):
             f.write(json.dumps(self.endpoints, indent=4))
 
         with open(f"{folder_name_or_path}/data/config.ini", "a") as f:
-            f.write(f"ip_adresses = {self.ip_adresses}\n")
+            f.write(f"ip_addresses = {self.ip_adresses}\n")
             f.write(f"crawl_ports = {self.crawl_ports}\n")
             f.write(f"excl_ports = {self.excl_ports}\n")
