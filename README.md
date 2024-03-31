@@ -1,11 +1,16 @@
-# services
-This Repo is designed to hold all services that are required for sofah
+# SOFAH Services Module
 
-You are supposed to specify additional services in this repo
+This repository contains the Services module for the SOFAH (Speedy Open Framework for Automated Honeypot-development) project, which includes the implementation of various services essential for the operation of SOFAH honeypots. These services are crucial for emulating realistic network environments and capturing interactions with potential threats.
 
-### What is a service?
+## Services Overview
 
-A service is a structure in the SOFAH-Project.
-It usually implements a docker container, that is automatically configured.
+The SOFAH Services module comprises several key services, each responsible for a specific aspect of the honeypot framework:
 
-So **IF** you want to add Services to Sofah, you have to add them here, and in the ennorm stage.
+- **API Honeypot (`api_honeypot.py`)**: Simulates API endpoints to capture and analyze requests from potential attackers.
+- **ENNORM (`ennorm.py`)**: The ENrichment NORMalization module that processes data to automatically configure and deploy services.
+- **Log API (`log_api.py`)**: Collects and aggregates log data from all services, facilitating analysis and monitoring.
+- **Nginx Honeypot (`nginx_honeypot.py`)**: Acts as a reverse proxy to direct traffic to appropriate honeypots based on request details.
+- **Port Spoof (`port_spoof.py`)**: Emulates open ports and services to deceive scanners and attackers.
+- **Recon (`recon.py`)**: Conducts reconnaissance to gather information on potential targets for the honeypot to simulate.
+
+
