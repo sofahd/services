@@ -6,7 +6,7 @@ class NginxHoneypot(DockerComposeService):
     This class represents the Nginx docker-compose service for the honeypot. It inherits from the DockerComposeService
     """
 
-    def __init__(self, name:str, token:str, port:int, nginx_api_net_name:str, nginx_config:list[str], api_container_name:str) -> None:
+    def __init__(self, name:str, token:str, port:int, nginx_api_net_name:str, nginx_config:list[str], api_container_name:str, create_cert:str, cn:str="", c:str="", st:str="", l:str="", o:str="", ou:str="") -> None:
         """
         Constructor for the NginxHoneypotService class.
 
@@ -21,6 +21,22 @@ class NginxHoneypot(DockerComposeService):
         :type nginx_api_net_name: str
         :param nginx_config: The configuration file content for the nginx service.
         :type nginx_config: list[str]
+        :param api_container_name: The name of the container to depend on.
+        :type api_container_name: str
+        :param create_cert: Whether to create a self-signed certificate.
+        :type create_cert: str
+        :param cn: The common name for the certificate.
+        :type cn: str
+        :param c: The country for the certificate.
+        :type c: str
+        :param st: The state for the certificate.
+        :type st: str
+        :param l: The location for the certificate.
+        :type l: str
+        :param o: The organization for the certificate.
+        :type o: str
+        :param ou: The organizational unit for the certificate.
+        :type ou: str
         """
         
         self.nginx_config = nginx_config
@@ -30,6 +46,14 @@ class NginxHoneypot(DockerComposeService):
             "    restart: unless-stopped",
             "    build: ",
             "      context: ./<name>",
+            "      args:",
+            "        CREATE_CERT: <create_cert>",
+            "        CN: <cn>",
+            "        C: <c>",
+            "        ST: <st>",
+            "        L: <l>",
+            "        O: <o>",
+            "        OU: <ou>",
             "    networks:",
             "      - log_net",
             "      - <nginx_api_net_name>",
@@ -43,7 +67,14 @@ class NginxHoneypot(DockerComposeService):
             "<name>": name,
             "<port>": port,
             "<nginx_api_net_name>": nginx_api_net_name,
-            "<api_container_name>": api_container_name
+            "<api_container_name>": api_container_name,
+            "<create_cert>": create_cert,
+            "<cn>": cn,
+            "<c>": c,
+            "<st>": st,
+            "<l>": l,
+            "<o>": o,
+            "<ou>": ou
         }
 
         super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/nginx.git", token=token, networks=["log_net", nginx_api_net_name], variables=variables)
