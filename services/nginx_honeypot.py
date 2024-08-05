@@ -63,6 +63,21 @@ class NginxHoneypot(DockerComposeService):
             "      - <api_container_name>",
         ]
 
+
+        # Yeah I know this is messy, but I'm just trying to make sure that the variables are not None, no matter what happens
+        if not cn:
+            cn = ""
+        if not c:
+            c = ""
+        if not st:
+            st = ""
+        if not l:
+            l = ""
+        if not o:
+            o = ""
+        if not ou:
+            ou = ""
+
         variables = {
             "<name>": name,
             "<port>": port,
