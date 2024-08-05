@@ -47,7 +47,7 @@ class NginxHoneypot(DockerComposeService):
             "    build: ",
             "      context: ./<name>",
             "      args:",
-            "        CREATE_CERT: <create_cert>",
+            "        CREATE_CERT: '<create_cert>'",
             "        CN: '<cn>'",
             "        C: '<c>'",
             "        ST: '<st>'",
