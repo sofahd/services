@@ -1,5 +1,6 @@
 from sofahutils import DockerComposeService
 from typing import Optional, Union
+from configparser import ConfigParser
 import json
 
 
@@ -87,9 +88,20 @@ class ReconService(DockerComposeService):
         with open(f"{folder_name_or_path}/data/endpoints.json", "w") as f:
             f.write(json.dumps(self.endpoints, indent=4))
 
-        with open(f"{folder_name_or_path}/data/config.ini", "a") as f:
-            f.write(f"rate = {self.rate}\n\n")
-            f.write(f"[Scan]\n")
-            f.write(f"ip_addresses = {self.ip_adresses}\n")
-            f.write(f"crawl_ports = {self.crawl_ports}\n")
-            f.write(f"excl_ports = {self.excl_ports}\n")
+        # Set the masscan rate and scan parameters in their proper sections via
+        # configparser. A blind append would duplicate the [Scan] section that the
+        # recon repo's config.ini template already ships, which configparser then
+        # refuses to read (DuplicateSectionError).
+        config_path = f"{folder_name_or_path}/data/config.ini"
+        config = ConfigParser()
+        config.read(config_path)
+        if not config.has_section("Masscan"):
+            config.add_section("Masscan")
+        config.set("Masscan", "rate", str(self.rate))
+        if not config.has_section("Scan"):
+            config.add_section("Scan")
+        config.set("Scan", "ip_addresses", str(self.ip_adresses))
+        config.set("Scan", "crawl_ports", str(self.crawl_ports))
+        config.set("Scan", "excl_ports", str(self.excl_ports))
+        with open(config_path, "w") as f:
+            config.write(f)
