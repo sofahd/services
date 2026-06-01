@@ -30,6 +30,8 @@ class PortSpoofService(DockerComposeService):
         service_def = [
             "    container_name: <name>",
             "    restart: unless-stopped",
+            "    security_opt:",
+            '      - "no-new-privileges:true"',
             "    build: ",
             "      context: ./<name>",
             "      args:",
