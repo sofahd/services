@@ -35,4 +35,4 @@ class LogApiService(DockerComposeService):
             "<port>": port,
             "<path>": log_folder_path
         }
-        super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/log-api.git", token=token, networks=["log_net"], variables=variables)
+        super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/log-api.git", token=token, networks=["log_net"], variables=variables)

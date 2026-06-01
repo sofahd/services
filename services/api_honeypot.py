@@ -37,7 +37,6 @@ class ApiHoneypot(DockerComposeService):
             "    build: ",
             "      context: ./<name>",
             "      args:",
-            "        TOKEN: '<token>'",
             "        EXT_PORT: <ext_port>",
             "        LOG_API: '<log_api>'",
             "    volumes:",
@@ -61,7 +60,7 @@ class ApiHoneypot(DockerComposeService):
             "<log_container_name>": log_container_name
         }
 
-        super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/api.git", token=token, networks=["log_net", nginx_api_net_name], variables=variables)
+        super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/api.git", token=token, networks=["log_net", nginx_api_net_name], variables=variables)
         
     def download_repo(self, folder_name_or_path: str = None) -> None:
         """

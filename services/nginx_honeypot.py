@@ -94,7 +94,7 @@ class NginxHoneypot(DockerComposeService):
             "<ou>": ou
         }
 
-        super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/nginx.git", token=token, networks=["log_net", nginx_api_net_name], variables=variables)
+        super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/nginx.git", token=token, networks=["log_net", nginx_api_net_name], variables=variables)
 
 
     def download_repo(self, folder_name_or_path:Optional[str] = None) -> None:

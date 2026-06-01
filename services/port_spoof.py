@@ -38,7 +38,6 @@ class PortSpoofService(DockerComposeService):
             "        POOF_PORT: '<port>'",
             "        POOF_BANNER: '<banner>'",
             "        POOF_MODE: '<mode>'",
-            "        TOKEN: '<token>'",
             "        LOG_API: '<log_api>'",
             "    ports:",
             "      - '<port>:65100'",
@@ -61,4 +60,4 @@ class PortSpoofService(DockerComposeService):
             "<log_container_name>": log_container_name
         }
 
-        super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/port_spoof.git", token=token, networks=["log_net"], variables=variables)
+        super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/port_spoof.git", token=token, networks=["log_net"], variables=variables)

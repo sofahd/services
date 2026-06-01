@@ -32,7 +32,6 @@ class EnnormService(DockerComposeService):
             "      context: ./<name>",
             "      args:",
             "        IP: '<ip>'",
-            "        TOKEN: '<token>'",
             "        LOG_API: '<log_api_url>'",
             "    networks:",
             "      - log_net",
@@ -56,7 +55,7 @@ class EnnormService(DockerComposeService):
 
         self.placeholder_vars = placeholder_vars
 
-        super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/ennorm.git", token=token, networks=["log_net"], variables=variables)
+        super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/ennorm.git", token=token, networks=["log_net"], variables=variables)
 
 
 

@@ -40,7 +40,6 @@ class ReconService(DockerComposeService):
             "    build: ",
             "      context: ./<name>",
             "      args:",
-            "        TOKEN: '<token>'",
             "        LOG_API: '<log_api>'",
             "    networks:",
             "      - log_net",
@@ -66,7 +65,7 @@ class ReconService(DockerComposeService):
         self.excl_ports = excl_ports if isinstance(excl_ports, list) else [excl_ports] if excl_ports != None else []
         self.rate = rate
 
-        super().__init__(name=name, service_def=service_def, github_link="https://$TOKEN:x-oauth-basic@github.com/sofahd/recon.git", token=token, networks=["log_net"], variables=variables)
+        super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/recon.git", token=token, networks=["log_net"], variables=variables)
 
 
 
