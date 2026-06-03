@@ -6,11 +6,12 @@ Tests for the services builder templates:
 """
 from ast import literal_eval
 from configparser import ConfigParser
+import json
 
 import yaml
 
 from sofahutils import DockerCompose, DockerComposeService
-from services import ApiHoneypot, NginxHoneypot, PortSpoofService, LogApiService, ReconService
+from services import ApiHoneypot, NginxHoneypot, PortSpoofService, LogApiService, ReconService, SshHoneypotService
 
 
 def _compose_doc():
@@ -146,3 +147,45 @@ def test_recon_writes_scan_params_into_sections(tmp_path, monkeypatch):
     assert cfg.has_option("Utils", "api_list")             # template section preserved
     assert literal_eval(cfg.get("Scan", "ip_addresses")) == ["0.0.0.0"]
     assert literal_eval(cfg.get("Scan", "crawl_ports")) == [80]
+
+
+def _ssh_service(port=2222):
+    return SshHoneypotService(name="ssh_22", port=port, persona={"banner": "SSH-2.0-dropbear_2019.78"},
+                              log_api_url="http://log_api:50005", log_container_name="log_api")
+
+
+def _ssh_compose_doc(port=2222):
+    return yaml.safe_load("\n".join(DockerCompose(services=[_ssh_service(port)]).dump()))
+
+
+def test_ssh_service_is_valid_yaml_and_hardened():
+    svc = _ssh_compose_doc()["services"]["ssh_22"]
+    assert svc["security_opt"] == ["no-new-privileges:true"]
+    assert svc["cap_drop"] == ["ALL"]
+    assert svc["read_only"] is True
+    assert svc["tmpfs"] == ["/tmp"]
+    # the pot binds an unprivileged in-container port, so -- unlike nginx -- nothing is added back
+    assert "cap_add" not in svc
+
+
+def test_ssh_service_publishes_external_port_to_high_in_container_port():
+    svc = _ssh_compose_doc(port=2222)["services"]["ssh_22"]
+    # external 2222 -> in-container 65022 (the unprivileged listen port)
+    assert svc["ports"] == ["2222:65022"]
+    assert svc["build"]["args"]["SSH_PORT"] == "65022"
+    assert svc["build"]["args"]["EXT_PORT"] == "2222"
+
+
+def test_ssh_download_repo_writes_persona(tmp_path, monkeypatch):
+    # the persona lands at src/data/persona.json so the pot's `COPY ./src` bakes it in
+    monkeypatch.setattr(DockerComposeService, "download_repo", lambda self, p=None: None)
+    svc = SshHoneypotService(name="ssh_22", port=2222,
+                             persona={"banner": "SSH-2.0-OpenSSH_7.4", "hostname": "cam01"},
+                             log_api_url="http://log_api:50005", log_container_name="log_api")
+    target = tmp_path / "ssh_22"
+    target.mkdir()
+    svc.download_repo(str(target))
+
+    written = json.loads((target / "src" / "data" / "persona.json").read_text())
+    assert written["hostname"] == "cam01"
+    assert written["banner"] == "SSH-2.0-OpenSSH_7.4"
