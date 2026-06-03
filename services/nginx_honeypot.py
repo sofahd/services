@@ -1,12 +1,13 @@
 from sofahutils import DockerComposeService
 from typing import Optional
+import os
 
 class NginxHoneypot(DockerComposeService):
     """
     This class represents the Nginx docker-compose service for the honeypot. It inherits from the DockerComposeService
     """
 
-    def __init__(self, name:str, token:str, port:int, nginx_api_net_name:str, nginx_config:list[str], api_container_name:str, create_cert:str, cn:str="", c:str="", st:str="", l:str="", o:str="", ou:str="") -> None:
+    def __init__(self, name:str, token:str, port:int, nginx_api_net_name:str, nginx_config:list[str], api_container_name:str, cert_pem:str="", key_pem:str="") -> None:
         """
         Constructor for the NginxHoneypotService class.
 
@@ -23,39 +24,40 @@ class NginxHoneypot(DockerComposeService):
         :type nginx_config: list[str]
         :param api_container_name: The name of the container to depend on.
         :type api_container_name: str
-        :param create_cert: Whether to create a self-signed certificate.
-        :type create_cert: str
-        :param cn: The common name for the certificate.
-        :type cn: str
-        :param c: The country for the certificate.
-        :type c: str
-        :param st: The state for the certificate.
-        :type st: str
-        :param l: The location for the certificate.
-        :type l: str
-        :param o: The organization for the certificate.
-        :type o: str
-        :param ou: The organizational unit for the certificate.
-        :type ou: str
+        :param cert_pem: PEM-encoded TLS certificate to serve, forged by ennorm's cert_forge from
+            the cloned device's captured cert. Empty for a plain-HTTP pot.
+        :type cert_pem: str
+        :param key_pem: PEM-encoded private key matching ``cert_pem``. Empty for a plain-HTTP pot.
+        :type key_pem: str
         """
-        
+
         self.nginx_config = nginx_config
+        self.cert_pem = cert_pem
+        self.key_pem = key_pem
 
         service_def = [
             "    container_name: <name>",
             "    restart: unless-stopped",
             "    security_opt:",
             '      - "no-new-privileges:true"',
+            "    cap_drop:",
+            "      - ALL",
+            # nginx master runs as root, binds the (possibly privileged) cloned port and
+            # drops its workers to www-data, so it needs exactly these back -- nothing else.
+            "    cap_add:",
+            "      - NET_BIND_SERVICE",
+            "      - CHOWN",
+            "      - SETUID",
+            "      - SETGID",
+            # Read-only root FS; nginx only needs its pid, logs and proxy temp files
+            # writable, so carve those out as tmpfs and nothing else.
+            "    read_only: true",
+            "    tmpfs:",
+            "      - /var/log/nginx",
+            "      - /var/lib/nginx",
+            "      - /run",
             "    build: ",
             "      context: ./<name>",
-            "      args:",
-            "        CREATE_CERT: '<create_cert>'",
-            "        CN: '<cn>'",
-            "        C: '<c>'",
-            "        ST: '<st>'",
-            "        L: '<l>'",
-            "        O: '<o>'",
-            "        OU: '<ou>'",
             "    networks:",
             "      - log_net",
             "      - <nginx_api_net_name>",
@@ -66,32 +68,11 @@ class NginxHoneypot(DockerComposeService):
         ]
 
 
-        # Yeah I know this is messy, but I'm just trying to make sure that the variables are not None, no matter what happens
-        if not cn:
-            cn = ""
-        if not c:
-            c = ""
-        if not st:
-            st = ""
-        if not l:
-            l = ""
-        if not o:
-            o = ""
-        if not ou:
-            ou = ""
-
         variables = {
             "<name>": name,
             "<port>": port,
             "<nginx_api_net_name>": nginx_api_net_name,
             "<api_container_name>": api_container_name,
-            "<create_cert>": create_cert,
-            "<cn>": cn,
-            "<c>": c,
-            "<st>": st,
-            "<l>": l,
-            "<o>": o,
-            "<ou>": ou
         }
 
         super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/nginx.git", token=token, networks=["log_net", nginx_api_net_name], variables=variables)
@@ -116,5 +97,17 @@ class NginxHoneypot(DockerComposeService):
         with open(f"{folder_name_or_path}/nginx.conf", "w") as f:
             for line in self.nginx_config:
                 f.write(line + "\n")
-            
+
+        # The nginx image always COPYs ./ssl/ into /etc/nginx/ssl. For a TLS pot, drop the
+        # forged cert/key there so nginx can serve them (nginx.conf points ssl_certificate at
+        # these paths); for a plain-HTTP pot the dir stays empty. Either way it must exist so
+        # the image's COPY succeeds.
+        ssl_dir = f"{folder_name_or_path}/ssl"
+        os.makedirs(ssl_dir, exist_ok=True)
+        if self.cert_pem and self.key_pem:
+            with open(f"{ssl_dir}/cert.pem", "w") as f:
+                f.write(self.cert_pem)
+            with open(f"{ssl_dir}/key.pem", "w") as f:
+                f.write(self.key_pem)
+
         return

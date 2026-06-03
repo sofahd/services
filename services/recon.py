@@ -37,6 +37,21 @@ class ReconService(DockerComposeService):
 
         service_def = [
             "    container_name: <name>",
+            # Hardened like the persistent pots, with two recon-specific differences:
+            # (1) cap_add NET_RAW -- masscan brings its own TCP/IP stack and needs raw sockets.
+            #     The Dockerfile grants the cap on the masscan binary via setcap, which only
+            #     takes effect while NET_RAW stays in the container's bounding set, hence
+            #     cap_add here on top of cap_drop: [ALL]. nmap needs nothing (connect scan).
+            # (2) NO no-new-privileges -- it suppresses file capabilities on exec (they are a
+            #     privilege gain, exactly what the flag blocks), which would leave masscan
+            #     unable to scan. recon is a short-lived one-shot job, not a long-running pot.
+            "    cap_drop:",
+            "      - ALL",
+            "    cap_add:",
+            "      - NET_RAW",
+            "    read_only: true",
+            "    tmpfs:",
+            "      - /tmp",
             "    build: ",
             "      context: ./<name>",
             "      args:",

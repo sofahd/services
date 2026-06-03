@@ -34,6 +34,13 @@ class ApiHoneypot(DockerComposeService):
             "    restart: unless-stopped",
             "    security_opt:",
             '      - "no-new-privileges:true"',
+            "    cap_drop:",
+            "      - ALL",
+            # Read-only root FS; the pot renders endpoint bodies in memory and keeps no
+            # state, so /tmp (uwsgi/python scratch) is the only writable path it needs.
+            "    read_only: true",
+            "    tmpfs:",
+            "      - /tmp",
             "    build: ",
             "      context: ./<name>",
             "      args:",

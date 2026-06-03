@@ -32,6 +32,12 @@ class PortSpoofService(DockerComposeService):
             "    restart: unless-stopped",
             "    security_opt:",
             '      - "no-new-privileges:true"',
+            "    cap_drop:",
+            "      - ALL",
+            # Read-only root FS; port_spoof writes nothing to disk, /tmp is just scratch.
+            "    read_only: true",
+            "    tmpfs:",
+            "      - /tmp",
             "    build: ",
             "      context: ./<name>",
             "      args:",
