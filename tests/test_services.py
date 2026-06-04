@@ -189,3 +189,72 @@ def test_ssh_download_repo_writes_persona(tmp_path, monkeypatch):
     written = json.loads((target / "src" / "data" / "persona.json").read_text())
     assert written["hostname"] == "cam01"
     assert written["banner"] == "SSH-2.0-OpenSSH_7.4"
+
+
+def test_ssh_download_repo_writes_deep_clone(tmp_path, monkeypatch):
+    # a credentialed recon harvest -> cloned files land in the sandbox tree and the
+    # listings/commands land in captured.json, so the pot replays the real device.
+    monkeypatch.setattr(DockerComposeService, "download_repo", lambda self, p=None: None)
+    svc = SshHoneypotService(
+        name="ssh_22", port=2222,
+        persona={"banner": "SSH-2.0-dropbear_2019.78", "hostname": "cam"},
+        files={"/etc/passwd": "root:x:0:0::/root:/bin/sh", "/proc/cpuinfo": "model: ARMv7"},
+        listings={"/": {"raw": "drwxr-xr-x 2 root root 4096 x .", "names": ["bin", "etc"]}},
+        commands={"ps": "    1 root /sbin/init"},
+        log_api_url="http://log_api:50005", log_container_name="log_api")
+    target = tmp_path / "ssh_22"
+    target.mkdir()
+    svc.download_repo(str(target))
+
+    data_dir = target / "src" / "data"
+    assert (data_dir / "sandbox" / "etc" / "passwd").read_text().startswith("root:")
+    assert (data_dir / "sandbox" / "proc" / "cpuinfo").read_text() == "model: ARMv7"
+    captured = json.loads((data_dir / "captured.json").read_text())
+    assert captured["listings"]["/"]["names"] == ["bin", "etc"]
+    assert captured["commands"]["ps"].endswith("/sbin/init")
+
+
+def test_ssh_download_repo_without_harvest_writes_empty_captured(tmp_path, monkeypatch):
+    # no credentials -> empty captured.json and no sandbox overrides; pot uses its defaults.
+    monkeypatch.setattr(DockerComposeService, "download_repo", lambda self, p=None: None)
+    target = tmp_path / "ssh_22"
+    target.mkdir()
+    _ssh_service().download_repo(str(target))
+
+    captured = json.loads((target / "src" / "data" / "captured.json").read_text())
+    assert captured == {"listings": {}, "commands": {}}
+    assert not (target / "src" / "data" / "sandbox").exists()
+
+
+def test_recon_writes_ssh_credentials_when_provided(tmp_path, monkeypatch):
+    monkeypatch.setattr(DockerComposeService, "download_repo", lambda self, p=None: None)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "config.ini").write_text("[Masscan]\nrate = 1000\n\n[Scan]\n")
+
+    rs = ReconService(name="recon", token="t", log_api_url="http://log_api:50005",
+                      log_container_name="log_api", endpoints={"/": {"num": 1}},
+                      ip_adresses=["0.0.0.0"], ssh_username="root", ssh_password="root")
+    rs.download_repo(str(tmp_path))
+
+    cfg = ConfigParser()
+    cfg.read(str(data / "config.ini"))
+    assert cfg.get("Ssh", "username") == "root"
+    assert cfg.get("Ssh", "password") == "root"
+    assert cfg.getboolean("Ssh", "enabled") is True
+
+
+def test_recon_omits_ssh_section_without_credentials(tmp_path, monkeypatch):
+    monkeypatch.setattr(DockerComposeService, "download_repo", lambda self, p=None: None)
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "config.ini").write_text("[Masscan]\nrate = 1000\n\n[Scan]\n")
+
+    rs = ReconService(name="recon", token="t", log_api_url="http://log_api:50005",
+                      log_container_name="log_api", endpoints={"/": {"num": 1}},
+                      ip_adresses=["0.0.0.0"])
+    rs.download_repo(str(tmp_path))
+
+    cfg = ConfigParser()
+    cfg.read(str(data / "config.ini"))
+    assert not cfg.has_section("Ssh")

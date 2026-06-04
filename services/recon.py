@@ -10,7 +10,7 @@ class ReconService(DockerComposeService):
     """
     
     def __init__(self, name:str, token:str, log_api_url:str, log_container_name:str, endpoints:dict, ip_adresses:list[str], rate:Optional[int] = 1000, crawl_ports:Optional[Union[list[int],int]] = None,
-             excl_ports:Optional[Union[int, list[int]]] = None) -> None:
+             excl_ports:Optional[Union[int, list[int]]] = None, ssh_username:Optional[str] = None, ssh_password:Optional[str] = None, ssh_key_file:Optional[str] = None) -> None:
         """
         Constructor for the ReconService class. It takes in the name of the service
 
@@ -33,6 +33,14 @@ class ReconService(DockerComposeService):
         :type log_api_url: str
         :param log_container_name: The name of the log container to depend on.
         :type log_container_name: str
+        :param ssh_username: OPTIONAL username for DEEP SSH recon. When given, recon logs into
+            discovered SSH services and clones a deep persona (system info, files, processes)
+            for the SSH pot. Omit to keep SSH recon banner-only.
+        :type ssh_username: Optional[str]
+        :param ssh_password: OPTIONAL password paired with ssh_username.
+        :type ssh_password: Optional[str]
+        :param ssh_key_file: OPTIONAL in-container path to a private key, instead of a password.
+        :type ssh_key_file: Optional[str]
         """
 
         service_def = [
@@ -79,6 +87,9 @@ class ReconService(DockerComposeService):
         self.crawl_ports = crawl_ports if isinstance(crawl_ports, list) else [crawl_ports] if crawl_ports != None else []
         self.excl_ports = excl_ports if isinstance(excl_ports, list) else [excl_ports] if excl_ports != None else []
         self.rate = rate
+        self.ssh_username = ssh_username
+        self.ssh_password = ssh_password
+        self.ssh_key_file = ssh_key_file
 
         super().__init__(name=name, service_def=service_def, github_link="https://github.com/sofahd/recon.git", token=token, networks=["log_net"], variables=variables)
 
@@ -117,5 +128,18 @@ class ReconService(DockerComposeService):
         config.set("Scan", "ip_addresses", str(self.ip_adresses))
         config.set("Scan", "crawl_ports", str(self.crawl_ports))
         config.set("Scan", "excl_ports", str(self.excl_ports))
+
+        # Optional [Ssh] for deep SSH recon: only written when credentials were supplied, so
+        # the absence of creds leaves recon's SSH harvest off (banner-only).
+        if self.ssh_username:
+            if not config.has_section("Ssh"):
+                config.add_section("Ssh")
+            config.set("Ssh", "enabled", "true")
+            config.set("Ssh", "username", str(self.ssh_username))
+            if self.ssh_password:
+                config.set("Ssh", "password", str(self.ssh_password))
+            if self.ssh_key_file:
+                config.set("Ssh", "key_file", str(self.ssh_key_file))
+
         with open(config_path, "w") as f:
             config.write(f)

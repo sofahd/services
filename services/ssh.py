@@ -13,7 +13,7 @@ class SshHoneypotService(DockerComposeService):
     it needs no capabilities added back.
     """
 
-    def __init__(self, name: str, port: int, persona: dict, log_api_url: str, log_container_name: str, token: str = None, in_port: int = 65022) -> None:
+    def __init__(self, name: str, port: int, persona: dict, log_api_url: str, log_container_name: str, token: str = None, in_port: int = 65022, files: dict = None, listings: dict = None, commands: dict = None) -> None:
         """
         Constructor for the SshHoneypotService class.
 
@@ -33,9 +33,21 @@ class SshHoneypotService(DockerComposeService):
         :type token: Optional[str]
         :param in_port: The unprivileged in-container listen port, defaults to 65022.
         :type in_port: int
+        :param files: Optional ``{path: content}`` of files recon cloned from the real device
+            (deep harvest). Written into the pot's sandbox so ``cat`` serves the real content.
+        :type files: Optional[dict]
+        :param listings: Optional ``{dir: {"raw", "names"}}`` directory listings cloned from the
+            device, replayed by the pot's ``ls``.
+        :type listings: Optional[dict]
+        :param commands: Optional ``{name: output}`` command outputs cloned from the device
+            (ps, ifconfig, ...), replayed verbatim by the pot.
+        :type commands: Optional[dict]
         """
 
         self.persona = persona
+        self.files = files or {}
+        self.listings = listings or {}
+        self.commands = commands or {}
 
         service_def = [
             "    container_name: <name>",
@@ -93,7 +105,39 @@ class SshHoneypotService(DockerComposeService):
         if folder_name_or_path is None:
             folder_name_or_path = self.name
 
-        persona_path = os.path.join(folder_name_or_path, "src", "data", "persona.json")
-        os.makedirs(os.path.dirname(persona_path), exist_ok=True)
-        with open(persona_path, "w") as handle:
+        data_dir = os.path.join(folder_name_or_path, "src", "data")
+        os.makedirs(data_dir, exist_ok=True)
+
+        with open(os.path.join(data_dir, "persona.json"), "w") as handle:
             handle.write(json.dumps(self.persona, indent=4))
+
+        # Deep-harvest material (empty unless recon had credentials):
+        #  * cloned files are planted into the sandbox tree the pot's fake FS loads, so `cat`
+        #    serves the real device's content (and overrides the shipped decoys);
+        #  * listings + command outputs go to captured.json, which the pot replays for
+        #    `ls` / `ps` / `ifconfig` / ...
+        self._write_sandbox_files(os.path.join(data_dir, "sandbox"))
+        with open(os.path.join(data_dir, "captured.json"), "w") as handle:
+            handle.write(json.dumps({"listings": self.listings, "commands": self.commands}, indent=4))
+
+    def _write_sandbox_files(self, sandbox_dir: str) -> None:
+        """
+        Plant each cloned ``{path: content}`` file under ``sandbox_dir`` at its device path.
+
+        ``..`` / ``.`` segments are dropped so a hostile harvested path can never escape the
+        sandbox directory -- the same defensive join the api pot uses for its file-read
+        emulation.
+
+        ---
+        :param sandbox_dir: The pot's ``src/data/sandbox`` directory.
+        :type sandbox_dir: str
+        """
+
+        for path, content in self.files.items():
+            parts = [segment for segment in str(path).split("/") if segment not in ("", ".", "..")]
+            if not parts:
+                continue
+            target = os.path.join(sandbox_dir, *parts)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with open(target, "w") as handle:
+                handle.write(content if isinstance(content, str) else str(content))
